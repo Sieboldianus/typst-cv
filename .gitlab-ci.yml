@@ -1,0 +1,23 @@
+image: docker:latest
+
+variables:
+  BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
+
+stages:
+  - build
+
+build and push:
+  stage: build
+  tags:
+    - dind-runner
+  script:
+    # 1. Read version from .version file
+    - VERSION=$(cat .version | tr -d '[:space:]')
+    # 2. Login to GitLab registry using the job token
+    - echo "$CI_JOB_TOKEN" | docker login --username gitlab-ci-token --password-stdin "$CI_REGISTRY"
+    # 3. Build with both version and latest tags
+    - docker build --pull --provenance=false --tag "$CI_REGISTRY_IMAGE:$VERSION" --tag "$CI_REGISTRY_IMAGE:latest" .
+    # 4. Push all tags to your registry
+    - docker push "$CI_REGISTRY_IMAGE" --all-tags
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
